@@ -121,11 +121,103 @@ Object.is(NaN, NaN); // true
 ```
 
 ### 삼항 조건 연산자
+- 조건식 ? 조건식이 `true` 일 때 반환 값 : 조건식이 `false` 일 때 반환 값
+- 첫번째 피연산자가 `true`로 평가되면 두번째 피연산자 반환.
+- 첫번째 피연산자가 `false`로 평가되면 세번째 피연산자 반환.
+- 만약 조건식의 결과가 boolean 값이 아니면 boolean 값으로 **암묵적 타입 변환**이 일어난다.
+- if...else 문과 달리 값처럼 사용할 수 있다.
+```javascript
+var x = 2;
+// 2 % 2 = 0, 0은 false로 암묵적 타입 변환된다.
+var result = x % 2 ? '홀수' : '짝수';
+console.log(result); // '짝수'
+
+result = if(x % 2){result = '홀수';} else {result = '짝수';} // SyntaxError
+```
+- 조건에 따라 수행해야 할 문이 하나일 경우 사용하면 좋다.
+
+<br>
 
 ### 논리 연산자
+논리 연산자 | 의미
+:--:|--
+\|\| | 논리합(OR)
+&& | 논리곱(AND)
+! | 부정(NOT)
+
+- `&&` 연산에서는 하나라도 `false`가 존재하면 결과가 `false`이다.
+- `||` 연산에서는 하나라도 `true`가 존재하면 결과가 `true`이다.
+```javascript
+true && false; // false
+false && false; // false
+
+true || false; // true
+false || false; // false
+
+!true; // false
+
+//암묵적 타입 변환
+!0; // true
+!'hello'; // false
+```
 
 ### typeof 연산자
+- 피연산자의 데이터 타입을 문자열로 반환한다.
+- 실제 데이터 타입과 정확히 일치하지는 않는다.
+```javascript
+typeof ''; // 'string'
+typeof 1; // 'number'
+typeof NaN; // 'number'
+typeof true; // 'boolean'
+typeof undefined; // 'undefined'
+typeof Symbol(); // 'symbol'
+typeof null; // 'object'
+typeof []; // 'object'
+typeof {}; // 'object'
+typeof new Date(); // 'object'
+typeof /test/gi; // 'object'
+typeof function () {}; // 'function'
+```
+< 주 의 >
+- `null`의 `typeof` 값이 `null`이 아닌 `object`로 반환되기 때문에 값이 `null`인지 확인할 때는 **일치 연산자(===)** 르 사용한다.
+- 선언하지 않은 식별자를 `typeof`로 연산하면 `ReferenceError`가 아니라 `undefined`를 반환한다.
+
 
 ### 지수 연산자
+- ES7에서 도입됐다.
+```javascript
+2 ** 2; // 2^2 = 4
+2 ** 2.5; // 5.65695...
+2 ** 0; // 1
+2 ** = 2; // 4
+
+// ES7 이전에는 Math.pow를 사용했다.
+Math.pow(2, 2);
+Math.pow(2, 2.5);
+
+// 음수 거듭제곱의 밑으로 사용하려면 괄호로 묶어야 한다.
+(-5) ** 2; // 25
+-5 ** 2; /// SyntaxError: ...must be used to disambiguate operator precedence (괄호가 필요하다)
+```
 
 ### 연산자 우선순위
+- 우선순위를 외우기 보다 괄호를 사용하여 우선순위를 명시적으로 조절하는 것이 좋다.
+
+우선순위 | 연산자
+:--:|--
+1 | ()
+2 | new(매개변수 존재), ., [](프로퍼티 접곤), ()(함수호출), ?.(옵셔널 체이닝 연산자)
+3 | new(매개변수 미존재)
+4 | x++, x--
+5 | !x, +x, -x, ++x, --x, typeof, delete
+6 | **
+7 | *, /, %
+8 | +, -
+9 | <, <=, >, >=, in, instanceof
+10 | ==, !=, ===, !==
+11 | ??(null 병합 연산자)
+12 | &&
+13 | 
+14 | ? ... : ...
+15 | 할당 연산자(=, +=, -=, ...)
+16 | ,
