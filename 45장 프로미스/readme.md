@@ -2,30 +2,6 @@
 
 ### 비동기 처리를 위한 콜백 패턴의 단점
 ```js
-const get = url => {
-  const xhr = new XMLHttpRequest();
-  xhr.open('GET', url);
-  xhr.send();
-
-  xhr.onload = () => {
-    if (xhr.status === 200) {
-      console.log(JSON.parse(xhr.response));
-    } else {
-      console.error(`${xhr.status} ${xhr.statusText}`);
-    }
-  };
-};
-
-get('https://jsonplaceholder.typicode.com/posts/1');
-/*
-{
-  userId: 1, 
-  id: 1, 
-  title: 'sunt aut facere repellat provident occaecati excepturi optio reprehenderit', 
-  body: 'quia et suscipit\nsuscipit recusandae consequuntur …strum rerum est autem sunt rem eveniet architecto'}
-*/
-```
-```js
 let g = 0;
 
 setTimeout(() => { g = 100; }, 0);
@@ -52,8 +28,8 @@ const get = url => {
 const response = get('https://jsonplaceholder.typicode.com/posts/1');
 console.log(response); // undefined
 ```
-- `get` 함수는 반환문이 없으므로 암묵적으로 `undefined`를 반환하다. 
-- `onload` 이벤트 핸들러를 `get` 함수가 호출하지 않았기 때문에 `onload` 이벤트 핸들러의 반환값을 캐치할 수 없다.
+- `get` 함수는 반환문(return)이 없으므로 암묵적으로 `undefined`를 반환한다. 
+- `onload` 이벤트 핸들러를 `get` 함수가 호출하지 않았기 때문에 `get` 함수는 `onload` 이벤트 핸들러의 반환값을 캐치할 수 없다.
 - 그렇다면 서버의 응답을 상위 스코프의 변수에 할당하면 어떨까?
 ```js
 let todos;
@@ -76,10 +52,12 @@ const get = url => {
 get('https://jsonplaceholder.typicode.com/posts/1');
 console.log(todos); // undefined
 ```
-- `xhr.onload` 이벤트 핸들러는 언제나 마지막 줄의 `console.log`가 종료된 이후에 호출된다.
-- 따라서 `console.log`를 출력하는 시점에는 아직 전역 변수 `todos`에 서버의 응답이 할당되기 이전이다.
+- `onload` 이벤트 핸들러는 언제나 마지막 줄의 `console.log`가 종료된 이후에 호출된다.
+- 따라서 `console.log`를 출력하는 시점에는 아직 전역 변수 `todos`에 서버의 응답이 할당되기 전이다.
 - 이처럼 **비동기 함수는 비동기 처리 결과를 외부에 반환할 수 없고, 상위 스코프의 변수에 할당할 수도 없다.**
 - 따라서 **비동기 함수의 처리결과(서버의 응답 등)에 대한 후속 처리는 비동기 함수 내부에서 수행해야 한다.**
+
+**콜백 헬**
 ```js
 const get = (url, callback) => {
     const xhr = new XMLHttpRequest();
@@ -350,3 +328,95 @@ Promise.allSettled([
 1: {status: 'rejected', reason: Error: Error! at <anonymous>:3:54}*/
 ```
 
+### 마이크로태스크 큐
+```js
+setTimeout(() => console.log(1), 0);
+
+Promise.resolve()
+  .then(() => console.log(2))
+  .then(() => console.log(3));
+```
+- 위의 예제는 예상과 다르게 2 -> 3 -> 1 순으로 출력된다.
+- 왜? 프로미스의 후속 처리 메서드(then)의 콜백 함수는 태스크 큐가 아니라 **마이크로태스크 큐**에 저장되기 떄문.
+- **마이크로태스크 큐는 태스크 큐보다 우선순위가 높아** 콜 스택이 비면 먼저 마이크로태스크 큐에서 대기하고 있는 함수를 가져와 실행하고 마이크로태스크 큐까지 비면 태스크 큐에서 대기하는 함수를 실행한다.
+- 마이크로태스크 큐에는 프로미스의 후속 처리 메서드의 콜백 함수가 일지 저장되며 그 외 비동기 함수의 콜백 함수나 이벤트 핸들러는 태스크 큐에 일시 저장된다.
+
+### fetch
+- `fetch` 함수는 `XMLHttpRequest` 객체와 마찬가지로 HTTP 요청 전송 기능을 제공하는 클라이언트 사이드 Web API 이다.
+- 프로미스를 지원하기 때문에 비동기 처리를 위한 콜백 패턴의 단점에서 자유롭다.
+
+```js
+const promise = fetch(url, [, options])
+```
+- `fetch` 함수는 HTTP 응답을 나타내는 `Response` 객체를 래핑한 `Promise` 객체를 반환한다.
+
+```js
+fetch('https://jsonplaceholder.typicode.com/todos/1')
+  // response는 HTTP 응답을 나타내는 Response 객체다.
+  // json 메서드를 사용하여 Response 객체에서 HTTP 응답 몸체를 취득하여 역직렬화한다.
+  .then(response => response.json())
+  // json은 역직렬화된 HTTP 응답 몸체다.
+  .then(json => console.log(json));
+
+// {userId: 1, id: 1, title: 'delectus aut autem', completed: false}
+```
+- `fetch` 함수에 첫 번째 인수로 HTTP 요청을 전송할 URL과 두 번째 인수로 HTTP 요청 메서드, HTTP 요청 헤더, 페이로드 등을 설정한 객체를 전달하여 HTTP 요청을 전송 할 수 있다.
+
+```js
+const request = {
+  get(url) {
+    return fetch(url);
+  },
+  post(url, payload) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  },
+  patch(url, payload) {
+    return fetch(url, {
+      method: 'PATCH',
+      headers: { 'content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  },
+  delete(url) {
+    return fetch(url, { method: 'DELETE' });
+  }
+};
+
+const url = 'https://jsonplaceholder.typicode.com/todos';
+// GET 요청
+request.get(`${url}/1`)
+  .then(res => res.json())
+  .then(console.log);
+// {userId: 1, id: 1, title: 'delectus aut autem', completed: false}
+
+
+// POST 요청
+request.post(url, {
+  userId: 1,
+  title: 'JavaScript',
+  completed: false
+}).then(res => res.json())
+  .then(console.log)
+  .catch(console.error);
+// {userId: 1, title: 'JavaScript', completed: false, id: 201}  
+
+// PATCH 요청
+request.patch(`${url}/1`, {
+  completed: true
+}).then(res => res.json())
+  .then(console.log)
+  .catch(console.error);
+// {userId: 1, id: 1, title: 'delectus aut autem', completed: true}
+
+// DELETE 요청
+request.delete(`${url}/1`)
+  .then(res => res.json())
+  .then(console.log)
+  .catch(console.error);
+// {}
+```
+- 더 자세한 내용은 [MDN Using Fetch](https://developer.mozilla.org/ko/docs/Web/API/Fetch_API/Using_Fetch)를 참고하자.
